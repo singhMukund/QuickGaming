@@ -2,6 +2,7 @@
   "name": "pixi-project",
   "version": "1.0.0",
   "scripts": {
+    "build": "webpack --mode production",
     "start": "webpack serve --open --mode=development"
   },
   "dependencies": {
