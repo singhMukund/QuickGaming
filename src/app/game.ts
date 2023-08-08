@@ -26,8 +26,6 @@ export class Game {
 
   private betAmount = 100;
   private backCard!: BackCard;
-  private dealerHasStood = false;
-
 
 
   constructor() {
@@ -120,7 +118,7 @@ export class Game {
   private startNewRound() {
     this.player.clearHand();
     this.dealer.clearHand();
-    // this.resultDisplay.setText();
+    this.resultDisplay.setText('');
   
     if (this.deck.getDeckSize() <= 0) {
       this.deck.resetDeck();
@@ -129,7 +127,7 @@ export class Game {
   
     for (let i = 0; i < 2; i++) {
       this.player.dealCard(this.deck.dealCard()!);
-      this.dealer.dealCard(this.deck.dealCard()!); // Deal two cards to the dealer
+      this.dealer.dealCard(this.deck.dealCard()!);
     }
   
     this.renderCards();
@@ -140,7 +138,6 @@ export class Game {
     this.enableButtons();
     this.enableStandButton(); // Enable the "Stand" button at the start of a new round
   }
-  
 
   private enableStandButton(): void {
     const standButton = document.getElementById('stand-button') as HTMLButtonElement;
@@ -170,10 +167,10 @@ export class Game {
 
   private renderCards() {
     this.gameContainer.removeChildren();
-  
+
     const playerCards = this.player.getHand().getCards();
     const dealerCards = this.dealer.getHand().getCards();
-  
+
     // Render player cards
     let playerCardX = 100;
     const playerCardY = 500;
@@ -183,29 +180,24 @@ export class Game {
       this.gameContainer.addChild(cardSprite);
       playerCardX += 100;
     }
-  
-    // Create a back card instance
-    const backCardSprite = this.backCard.getSprite();
-    const dealerCardY = 100;
-  
+
     // Render dealer cards
     let dealerCardX = 100;
-  
-    // Render the back card (hidden)
-    backCardSprite.position.set(dealerCardX, dealerCardY);
-    this.gameContainer.addChild(backCardSprite);
-    dealerCardX += 100;
-  
-    // Render the second dealer card (visible)
-    const secondDealerCard = dealerCards[1];
-    const secondDealerCardSprite = this.getCardSprite(secondDealerCard);
-    secondDealerCardSprite.position.set(dealerCardX, dealerCardY);
-    this.gameContainer.addChild(secondDealerCardSprite);
+    const dealerCardY = 100;
+    for (let i = 0; i < dealerCards.length; i++) {
+      const card = dealerCards[i];
+      const cardSprite = this.getCardSprite(card);
+
+      if (i === 0) {
+        // Use the back card sprite for the first dealer card
+        cardSprite.texture = this.backCard.getSprite().texture;
+      }
+
+      cardSprite.position.set(dealerCardX, dealerCardY);
+      this.gameContainer.addChild(cardSprite);
+      dealerCardX += 100;
+    }
   }
-  
-  
-  
-  
 
   private getCardSprite(card: Card): Sprite {
     const textureName = this.getCardTextureName(card);
@@ -246,7 +238,6 @@ export class Game {
   }
 
   private standPlayer() {
-    this.dealerHasStood = true;
     this.endRound();
   }
 
