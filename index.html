@@ -1,15 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blackjack/QuickGaming</title>
-</head>
-<body>
-  <!-- The PIXI.js application will be appended to this div -->
-  <div id="pixi-container"></div>
+  <title>Blackjack</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #02a732;
+    }
 
-  <!-- Include the bundled JavaScript file -->
-  <script src="dist/bundle.js"></script>
+    #pixi-container {
+      position: relative;
+      border: 2px solid #000;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    #bet-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #bet-text {
+      font-size: 20px;
+      color: #fff;
+    }
+
+    #bet-amount {
+      width: 60px;
+      height: 30px;
+      padding: 5px;
+      font-size: 18px;
+    }
+
+    #bet-button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    #result-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: #fff;
+    }
+
+    #action-buttons {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    }
+
+    .action-button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .action-button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+
+    .show {
+      transform: rotateY(180deg);
+      transition: transform 0.5s ease;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="pixi-container"></div>
+  <div id="bet-container">
+    <span id="bet-text">Bet Amount:</span>
+    <input type="number" id="bet-amount" value="100" min="100" max="1000">
+    <button id="bet-button">Place Bet</button>
+  </div>
+  <div id="result-text"></div>
+  <div id="action-buttons">
+    <!-- Add the Deal button -->
+    <button class="action-button" id="deal-button" disabled>Deal</button>
+    <button class="action-button" id="hit-button" disabled>Hit</button>
+    <button class="action-button" id="stand-button" disabled>Stand</button>
+  </div>
+  <script src="bundle.js"></script>
 </body>
+
 </html>
