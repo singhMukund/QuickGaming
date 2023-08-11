@@ -21,6 +21,7 @@ export class ResultDisplay {
     return this.displayObject;
   }
 
+
   public setText(text: string): void {
     this.resultText.text = text;
   }

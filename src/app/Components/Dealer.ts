@@ -20,12 +20,13 @@ export class Dealer {
   }
 
   dealCard(card: Card): void {
-    if (!this.backCard) {
-      this.backCard = card.getCardSprite();
-      this.backCard.visible = false;
-    } else {
-      this.hand.addCard(card);
-    }
+    this.hand.addCard(card);
+    // if (!this.backCard) {
+    //   this.backCard = card.getCardSprite();
+    //   this.backCard.visible = false;
+    // } else {
+      
+    // }
   }
 
   clearHand(): void {

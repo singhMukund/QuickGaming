@@ -1,5 +1,5 @@
 // Game.ts
-import { Application, Container, Loader, Sprite, Texture } from 'pixi.js';
+import { Application, Container, Graphics, Loader, Sprite, Text, TextStyle, Texture } from 'pixi.js';
 import { Background } from './Background/Background';
 import { Deck } from './Components/Deck';
 import { Player } from './Components/Player';
@@ -23,9 +23,21 @@ export class Game {
   private level = 1;
   private ranks = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13'];
   private suits = [1000, 2000, 3000, 4000];
+  private cardIds: string[] = [];
 
   private betAmount = 100;
   private backCard!: BackCard;
+  private playerCardMap: Map<string, Card> = new Map();
+  private dealerCardMap: Map<string, Card> = new Map();
+  private scoreCardContainer!: Container;
+  private scoreCardUI!: Sprite;
+  private playerText !: Text;
+  textStyle = new TextStyle({
+    fontFamily: 'Arial',
+    fontSize: 24,
+    fill: '#ffffff', // White color
+  });
+
 
 
   constructor() {
@@ -44,20 +56,45 @@ export class Game {
 
     this.gameContainer = new Container();
     this.app.stage.addChild(this.gameContainer);
-    this.backCard = new BackCard();
-    this.gameContainer.addChild(this.backCard.getSprite());
     this.loader = new Loader();
     this.loadImages();
   }
 
   private loadImages() {
+    this.loader.add('scoreCardBG', './assets/UI_ICON/scoreCard.png');
+    this.loader.add('BackCard', './assets/BackCard/BackCard.png');
     for (let i: number = 0; i < this.suits.length; i++) {
       for (let j: number = 0; j < this.ranks.length; j++) {
-        const fileName = `${this.suits[i] + parseInt(this.ranks[j])}.png`;
-        this.loader.add(fileName, `./assets/Cards/${fileName}`);
+        const fileName = `${this.suits[i] + parseInt(this.ranks[j])}`;
+        this.cardIds.push(fileName);
+        this.loader.add(fileName, `./assets/Cards/${fileName}.png`);
       }
     }
-    this.loader.add('bg', './assets/Background/Table_Img.png').load(this.onLoadComplete.bind(this));
+    this.loader.add('bg', './assets/Background/Table_Img.png');
+    // @ts-ignore
+    const loadAssets = () => {
+      return new Promise<void>((resolve, reject) => {
+        this.loader.load(() => {
+          resolve();
+        });
+        // @ts-ignore
+        this.loader.onError.add((error) => {
+          // Handle loading errors
+          console.error("Error loading assets:", error);
+          reject(error);
+        });
+      });
+    };
+
+
+    loadAssets()
+      .then(() => {
+        // This is called when assets are loaded
+        this.onLoadComplete();
+      })
+      .catch((error) => {
+        // Handle any errors from loading assets
+      });
   }
 
   private onLoadComplete() {
@@ -66,10 +103,27 @@ export class Game {
     this.player = new Player(1000);
     this.dealer = new Dealer();
     this.resultDisplay = new ResultDisplay(); // No constructor argument needed
-    this.gameContainer.addChild(this.resultDisplay.getDisplayObject());
+    this.app.stage.addChild(this.resultDisplay.getDisplayObject());
+    this.resultDisplay.getDisplayObject().x = window.screen.width / 4;
+    this.resultDisplay.getDisplayObject().y = 400;
+    this.scoreCardContainer = new Container();
+    this.app.stage.addChild(this.scoreCardContainer);
+    this.backCard = new BackCard(Texture.from('BackCard'));
+    this.app.stage.addChild(this.backCard.getSprite());
+    this.initializeUIcon();
     this.subscribeEvents();
     this.enableDealButton();
     this.startNewRound();
+  }
+
+  private initializeUIcon(): void {
+    this.scoreCardContainer.name = 'scoreCardContainer';
+    this.scoreCardUI = new Sprite(Texture.from('scoreCardBG'));
+    this.scoreCardContainer.addChild(this.scoreCardUI);
+    this.scoreCardUI.name = 'scoreCardUI';
+    this.scoreCardUI.setTransform(300, 400, 0.2, 0.2);
+    this.playerText = new Text('0', this.textStyle);
+    this.scoreCardContainer.addChild(this.playerText);
   }
 
   private enableDealButton() {
@@ -119,19 +173,20 @@ export class Game {
     this.player.clearHand();
     this.dealer.clearHand();
     this.resultDisplay.setText('');
-  
-    if (this.deck.getDeckSize() <= 0) {
+
+    if (this.deck.getDeckSize() <= 4) {
       this.deck.resetDeck();
       this.level++;
+      this.levelUp(`Level Up! Level: ${this.level}`);
     }
-  
+
     for (let i = 0; i < 2; i++) {
       this.player.dealCard(this.deck.dealCard()!);
       this.dealer.dealCard(this.deck.dealCard()!);
     }
-  
+
     this.renderCards();
-  
+
     if (this.player.getHand().getHandValue() === 21) {
       this.endRound();
     }
@@ -149,15 +204,15 @@ export class Game {
   private enableButtons(): void {
     const betButton = document.getElementById('bet-button') as HTMLButtonElement;
     const hitButton = document.getElementById('hit-button') as HTMLButtonElement;
-  
+
     if (betButton) {
       betButton.disabled = false;
     }
-  
+
     if (hitButton) {
       hitButton.disabled = false;
     }
-  
+
     // Enable the "Stand" button only if the player's hand value is less than 21
     const standButton = document.getElementById('stand-button') as HTMLButtonElement;
     if (standButton) {
@@ -170,45 +225,49 @@ export class Game {
 
     const playerCards = this.player.getHand().getCards();
     const dealerCards = this.dealer.getHand().getCards();
-
     // Render player cards
     let playerCardX = 100;
     const playerCardY = 500;
-    for (const card of playerCards) {
-      const cardSprite = this.getCardSprite(card);
+    this.backCard.getSprite().alpha = 1;
+    this.backCard.getSprite().scale.set(0.92);
+    this.backCard.getSprite().angle = 0;
+
+    for (let i = 0; i < playerCards.length; i++) {
+      const card = playerCards[i];
+      const cardSprite = card.getSprite();
+      card.setId(`playerCard_${i}`);
+      this.playerCardMap.set(`playerCard_${i}`, card);
       cardSprite.position.set(playerCardX, playerCardY);
       this.gameContainer.addChild(cardSprite);
+      this.scoreCardUI.setTransform(cardSprite.x + (cardSprite.width) / 2 + 30, 400, 0.2, 0.2);
+      this.playerText.text = `${this.player.getHand().getHandValue()}`;
+      this.playerText.y = this.scoreCardUI.y + (this.scoreCardUI.height) / 4;
+      this.playerText.x = this.scoreCardUI.x + (this.scoreCardUI.width) / 2.5 + 10;
+
       playerCardX += 100;
     }
 
     // Render dealer cards
     let dealerCardX = 100;
     const dealerCardY = 100;
+    this.backCard.show();
     for (let i = 0; i < dealerCards.length; i++) {
       const card = dealerCards[i];
-      const cardSprite = this.getCardSprite(card);
-
-      if (i === 0) {
-        // Use the back card sprite for the first dealer card
-        cardSprite.texture = this.backCard.getSprite().texture;
-      }
-
+      const cardSprite = card.getSprite();
+      card.setId(`dealerCard_${i}`);
+      this.dealerCardMap.set(`dealerCard_${i}`, card);
       cardSprite.position.set(dealerCardX, dealerCardY);
       this.gameContainer.addChild(cardSprite);
       dealerCardX += 100;
+      this.backCard.getSprite().x = cardSprite.x;
+      this.backCard.getSprite().y = cardSprite.y;
+      if (i === 1) {
+        card.hide();
+        cardSprite.alpha = 0;
+      }
     }
   }
 
-  private getCardSprite(card: Card): Sprite {
-    const textureName = this.getCardTextureName(card);
-    return new Sprite(this.loader.resources[`${textureName}`].texture);
-  }
-
-  private getCardTextureName(card: Card): string {
-    const rank = card.getRank();
-    const suit = card.getSuit();
-    return `${suit + parseInt(rank)}.png`;
-  }
 
   private hitPlayer() {
     if (this.player.getHand().getHandValue() < 21) {
@@ -221,11 +280,10 @@ export class Game {
     }
   }
 
-  private levelUp(): void {
+  private levelUp(text : string): void {
     // Reset the player's chips and level up
     this.player = new Player(1000);
-    this.level++;
-    this.resultDisplay.setText(`Level Up! Level: ${this.level}`);
+    this.resultDisplay.setText(text);
 
     // Enable the bet button to start a new round
     this.enableBetButton();
@@ -245,59 +303,53 @@ export class Game {
     this.disableButtons();
     this.dealerTurn();
   }
-  
+
   private dealerTurn(): void {
     const dealerHand = this.dealer.getHand();
     const cards = dealerHand.getCards();
     const lastCard = cards[cards.length - 1];
-  
-    if (lastCard.isCardHidden()) {
+
+    if (!lastCard.getActive()) {
+      lastCard.show();
       // Flip back card by animating its alpha from 1 to 0
-      gsap.to(lastCard.getCardSprite(), { alpha: 0, duration: 1, onComplete: () => {
-        lastCard.hide();
-        this.renderCards();
-        // Continue the dealer turn after a delay (1500ms)
-        this.evaluateResult();
-      }});
+      // Flip the hidden card by rotating it from 0 to 180 degrees
+      gsap.to(this.backCard.getSprite(), {
+        alpha: 0, duration: 0.5, onStart: () => {
+          // After the first rotation, change the texture to the front face
+          const card: Sprite = lastCard.getSprite()
+
+          // Flip the card back to its original position by rotating it from 180 to 360 degrees
+          gsap.to(card, {
+            alpha: 1,duration: 0.5, onComplete: () => {
+              // Continue with the evaluation after a delay (1500ms)
+
+              this.evaluateResult();
+            }
+          });
+        }
+      });
     } else {
       // If the last card is not hidden, evaluate the result
       this.evaluateResult();
     }
   }
-  
-  
-  private flipBackCardWithAnimation(): void {
-    const dealerHand = this.dealer.getHand();
-    const cards = dealerHand.getCards();
-    if (cards.length > 0) {
-      const lastCard = cards[cards.length - 1];
-      if (lastCard.isCardHidden()) {
-        lastCard.show();
-        setTimeout(() => {
-          lastCard.hide();
-          this.renderCards();
-        }, 500);
-      }
-    }
-  }
-  
 
   private disableButtons(): void {
     const betButton = document.getElementById('bet-button') as HTMLButtonElement;
-  const hitButton = document.getElementById('hit-button') as HTMLButtonElement;
-  const standButton = document.getElementById('stand-button') as HTMLButtonElement;
+    const hitButton = document.getElementById('hit-button') as HTMLButtonElement;
+    const standButton = document.getElementById('stand-button') as HTMLButtonElement;
 
-  if (betButton) {
-    betButton.disabled = true;
-  }
+    if (betButton) {
+      betButton.disabled = true;
+    }
 
-  if (hitButton) {
-    hitButton.disabled = true;
-  }
+    if (hitButton) {
+      hitButton.disabled = true;
+    }
 
-  if (standButton) {
-    standButton.disabled = true;
-  }
+    if (standButton) {
+      standButton.disabled = true;
+    }
   }
 
   private evaluateResult() {
@@ -325,7 +377,7 @@ export class Game {
     this.resultDisplay.setText(resultMessage);
 
     if (this.player.getChips() <= 0) {
-      this.levelUp();
+      this.levelUp('Fill the pump by add new bet by place bet button');
     } else {
       this.enableDealButton();
     }

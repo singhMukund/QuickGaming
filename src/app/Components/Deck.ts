@@ -1,5 +1,6 @@
 // Deck.ts
 
+import { Texture } from 'pixi.js';
 import { Card, Suit, Rank } from './Card';
 
 export class Deck {
@@ -15,7 +16,8 @@ export class Deck {
 
     for (let i : number = 0;i<Suit.length;i++) {
       for (let j:number=0;j<Rank.length;j++) {
-        const card = new Card(Suit[i], Rank[j]);
+        let texture : Texture = Texture.from(`${Suit[i] + parseInt(Rank[j])}`);
+        const card = new Card(Suit[i], Rank[j],texture);
         cards.push(card);
       }
     }
@@ -52,6 +54,6 @@ export class Deck {
 
   resetDeck(): void {
     this.cards = this.createDeck();
-    this.shuffleDeck();
+    this.shuffleDeck(); 
   }
 }

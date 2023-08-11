@@ -1,12 +1,11 @@
 import { Sprite, Texture } from 'pixi.js';
 
 export class BackCard {
-  private texture: Texture;
   private sprite: Sprite;
 
-  constructor() {
-    this.texture = Texture.from('./assets/BackCard/BackCard.png');
-    this.sprite = new Sprite(this.texture);
+  constructor(texture:Texture) {
+    this.sprite = new Sprite(texture);
+    this.sprite.scale.set(0.92);
     this.hide(); // By default, the back card is hidden
   }
 

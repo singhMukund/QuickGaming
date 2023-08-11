@@ -12,13 +12,28 @@ export class Card {
   private isHidden: boolean;
   private frontTexture: Texture;
   private sprite: Sprite;
+  private id: string ='';
 
-  constructor(suit: number, rank: string) {
+  constructor(suit: number, rank: string,texture:Texture) {
     this.suit = suit;
     this.rank = rank;
     this.isHidden = true;
-    this.frontTexture = Texture.from(`${suit + parseInt(rank)}.png`);
+    this.frontTexture = texture;
     this.sprite = new Sprite(this.frontTexture);
+  }
+
+  getId() :string{
+    return this.id;
+  }
+
+  getSprite() :Sprite{
+    return this.sprite;
+  }
+
+  
+
+  setId(id:string) :void{
+    this.id = id;
   }
 
   getSuit(): number {
@@ -35,6 +50,15 @@ export class Card {
     // For Ace (01), value can be either 1 or 11 (handled in Hand class)
     const numericValue = parseInt(this.rank);
     return isNaN(numericValue) ? 10 : numericValue;
+  }
+
+  setTexture(texture:Texture):void{
+    this.frontTexture = texture;
+    this.sprite.texture = texture;
+  }
+
+  getActive() : boolean{
+    return this.sprite.visible;
   }
 
   // Show the front face of the card
