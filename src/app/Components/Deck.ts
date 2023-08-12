@@ -26,7 +26,6 @@ export class Deck {
   }
 
   private shuffleDeck(): void {
-    // Fisher-Yates (Knuth) Shuffle
     let currentIndex = this.cards.length;
     let temporaryValue;
     let randomIndex;

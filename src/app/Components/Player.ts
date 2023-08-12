@@ -24,7 +24,6 @@ export class Player {
     return this.hand;
   }
 
-  // Place a bet
   placeBet(amount: number): boolean {
     if (amount >= 100 && amount <= this.chips) {
       this.bet = amount;
@@ -34,12 +33,10 @@ export class Player {
     return false;
   }
 
-  // Clear the bet after a round
   clearBet(): void {
     this.bet = 0;
   }
 
-  // Add winnings to chips
   addWinnings(winnings: number): void {
     this.chips += winnings;
   }
@@ -49,12 +46,10 @@ export class Player {
     this.chips -= this.bet;
   }
 
-  // Deal a card to the player's hand
   dealCard(card: Card): void {
     this.hand.addCard(card);
   }
 
-  // Clear the player's hand after a round
   clearHand(): void {
     this.hand.clear();
   }

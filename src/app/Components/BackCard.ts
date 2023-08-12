@@ -6,7 +6,7 @@ export class BackCard {
   constructor(texture:Texture) {
     this.sprite = new Sprite(texture);
     this.sprite.scale.set(0.92);
-    this.hide(); // By default, the back card is hidden
+    this.hide();
   }
 
   show(): void {

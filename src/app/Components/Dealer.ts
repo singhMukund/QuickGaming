@@ -21,12 +21,6 @@ export class Dealer {
 
   dealCard(card: Card): void {
     this.hand.addCard(card);
-    // if (!this.backCard) {
-    //   this.backCard = card.getCardSprite();
-    //   this.backCard.visible = false;
-    // } else {
-      
-    // }
   }
 
   clearHand(): void {

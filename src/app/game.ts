@@ -28,6 +28,8 @@ export class Game {
   private suits = [1000, 2000, 3000, 4000];
   private cardIds: string[] = [];
   private balanceDisplay!: Balance;
+  private placeBetText !: Text;
+  private placeBetAnimationContainer !: Container;
 
 
 
@@ -42,11 +44,32 @@ export class Game {
 
   private dealerScoreCardUI!: Sprite;
   private dealerScoreText !: Text;
+  private hitButton !: HTMLButtonElement;
+  private dealButton !: HTMLButtonElement;
+  private standButton !: HTMLButtonElement;
+  private arrowSprite!: Sprite;
+  private arrowMask!: Graphics;
+  private arrowMaskTween!: gsap.core.Tween;
+  private clonedChipsContainer!: Container;
+  private chipsBackImage !: Sprite;
+  private chipsText!: Text;
+
   textStyle = new TextStyle({
     fontFamily: 'Arial',
     fontSize: 24,
     fill: '#ffffff',
     align: 'center' // White color
+  });
+  titleTextStyle = new TextStyle({
+    fontFamily: 'Arial',  
+    fontSize: 36,         
+    fontWeight: 'bold',    
+    fill: '#ffffff',   
+    align: 'center',       
+    dropShadow: true,    
+    dropShadowColor: '#000000',
+    dropShadowBlur: 4,     
+    dropShadowDistance: 2, 
   });
   private renderer: any;
 
@@ -57,7 +80,6 @@ export class Game {
       backgroundColor: 0x02a732,
       width: window.innerWidth,
       height: window.innerHeight,
-      // autoResize: true,
     });
     const pixiContainer = document.getElementById('pixi-container');
     if (pixiContainer) {
@@ -81,6 +103,7 @@ export class Game {
     this.loader.add('Chip20', './assets/Chips/Chips20.png');
     this.loader.add('Chips_Back', './assets/Chips/chips_Back.png');
     this.loader.add('Add_button', './assets/UI_ICON/add_button.png');
+    this.loader.add('arrow_Image', './assets/UI_ICON/arrow_Image.png');
 
 
     for (let i: number = 0; i < this.suits.length; i++) {
@@ -99,7 +122,6 @@ export class Game {
         });
         // @ts-ignore
         this.loader.onError.add((error) => {
-          // Handle loading errors
           console.error("Error loading assets:", error);
           reject(error);
         });
@@ -109,35 +131,97 @@ export class Game {
 
     loadAssets()
       .then(() => {
-        // This is called when assets are loaded
         this.onLoadComplete();
       })
       .catch((error) => {
-        // Handle any errors from loading assets
       });
   }
+  
+
+  private playArrowAnimation(): void {
+    this.placeBetAnimationContainer.visible = true;
+    this.arrowSprite.y = -this.arrowSprite.height;
+    this.arrowMaskTween = gsap.to(this.arrowSprite, {
+      y: window.innerHeight * 0.5,
+      duration: 1,
+      repeat: -1,   
+      yoyo: true,  
+      onComplete: () => {
+        this.arrowSprite.x = -this.arrowSprite.height;
+        this.playArrowAnimation();
+      }
+    });
+  }
+
 
   private onLoadComplete() {
     new Background(this.app, this.loader);
     this.deck = new Deck();
     this.player = new Player(1000);
     this.dealer = new Dealer();
-    this.resultDisplay = new ResultDisplay(); 
+    this.resultDisplay = new ResultDisplay();
     this.balanceDisplay = new Balance(Texture.from('Add_button')); // You can set the initial balance here
     this.app.stage.addChild(this.balanceDisplay.getContainer());// No constructor argument needed
     this.app.stage.addChild(this.resultDisplay.getDisplayObject());
-    this.resultDisplay.getDisplayObject().x =(window.innerWidth) * 0.5;
+    this.resultDisplay.getDisplayObject().x = (window.innerWidth) * 0.5;
     this.resultDisplay.getDisplayObject().y = (window.innerHeight - 50) * 0.5;
     this.scoreCardContainer = new Container();
     this.backCard = new BackCard(Texture.from('BackCard'));
     this.app.stage.addChild(this.backCard.getSprite());
+    this.initializeDOMButton();
     this.initializeUIcon();
     this.subscribeEvents();
-    this.enableDealButton();
     this.initializeChips();
-    this.startNewRound();
+    this.initializeArrowAndMask();
     this.updateBalance(this.player.getChips());
+    this.scoreCardContainer.visible = false;
+    this.initializeClonedChips();
   }
+
+  private initializeClonedChips() :void{
+    this.clonedChipsContainer = new Container();
+    this.app.stage.addChild(this.clonedChipsContainer);
+    this.chipsBackImage = new Sprite(Texture.from('Chips_Back'));
+    this.clonedChipsContainer.addChild(this.chipsBackImage);
+    this.chipsBackImage.scale.set(0.2);
+    this.chipsBackImage.anchor.set(0.5);
+    this.chipsText = new Text('6',this.titleTextStyle);
+    this.chipsText.position.set(-15,-15);
+    this.clonedChipsContainer.addChild(this.chipsText);
+    this.clonedChipsContainer.position.set(50,window.innerHeight * 0.5);
+    this.clonedChipsContainer.visible = false;
+  }
+
+  private initializeArrowAndMask(): void {
+    this.placeBetAnimationContainer = new Container();
+    this.app.stage.addChild(this.placeBetAnimationContainer);
+
+    this.placeBetText = new Text("Place Bet",this.titleTextStyle);
+    this.placeBetAnimationContainer.addChild(this.placeBetText);
+    this.arrowSprite = new Sprite(Texture.from('arrow_Image'));
+    this.arrowSprite.anchor.set(0.5, 0.5);
+    this.arrowSprite.position.set(window.innerWidth * 0.5, window.innerHeight * 0.5);
+    this.placeBetAnimationContainer.addChild(this.arrowSprite);
+    this.placeBetText.position.set((window.innerWidth * 0.5 - (this.placeBetText.text.length * 9)) , window.innerHeight * 0.5 + 100);
+
+    this.arrowMask = new Graphics();
+    this.arrowMask.beginFill(0xffffff); // You can adjust the color as needed
+    this.arrowMask.drawRect(0, 0, window.innerWidth, window.innerHeight);
+    this.arrowMask.endFill();
+    this.arrowSprite.mask = this.arrowMask;
+    
+    this.playArrowAnimation();
+  }
+
+  private initializeDOMButton(): void {
+    this.hitButton = document.getElementById('hit-button') as HTMLButtonElement;
+    this.dealButton = document.getElementById('deal-button') as HTMLButtonElement;
+    this.standButton = document.getElementById('stand-button') as HTMLButtonElement;
+    this.hitButton && (this.hitButton.disabled = true);
+    this.standButton && (this.standButton.disabled = true)
+    this.dealButton && (this.dealButton.disabled = true)
+  }
+
 
   private initializeChips(): void {
     const chipTextures = [
@@ -156,6 +240,11 @@ export class Game {
     this.betAmount += value;
     let balance = this.balanceDisplay.getBalance() - value;
     this.updateBalance(balance);
+    this.dealButton && (this.dealButton.disabled = false);
+    this.placeBetAnimationContainer.visible = false;
+    this.arrowMaskTween.kill();
+    this.chipsText.text =  this.betAmount.toString();
+    this.clonedChipsContainer.visible = true;
   }
 
   private initializeUIcon(): void {
@@ -169,8 +258,6 @@ export class Game {
     this.scoreCardContainer.addChild(this.playerText);
 
 
-    //Dealer Score Card 
-
     this.dealerScoreCardUI = new Sprite(Texture.from('scoreCardBG'));
     this.scoreCardContainer.addChild(this.dealerScoreCardUI);
     this.dealerScoreCardUI.name = 'dealerScoreCardUI';
@@ -181,51 +268,17 @@ export class Game {
 
   }
 
-  private enableDealButton() {
-    const dealButton = document.getElementById('deal-button') as HTMLButtonElement;
-    const hitButton = document.getElementById('hit-button') as HTMLButtonElement;
-    const standButton = document.getElementById('stand-button') as HTMLButtonElement;
-    const betButton = document.getElementById('bet-button') as HTMLButtonElement;
-
-    if (dealButton) {
-      dealButton.disabled = false;
-    }
-    if (hitButton) {
-      hitButton.disabled = true;
-    }
-    if (standButton) {
-      standButton.disabled = true;
-    }
-    if (betButton) {
-      betButton.disabled = false;
-    }
-  }
-
   updateBalance(amount: number) {
     this.balanceDisplay.updateBalance(amount);
   }
 
   private subscribeEvents() {
-    const dealButton = document.getElementById('deal-button');
-    const hitButton = document.getElementById('hit-button');
-    const standButton = document.getElementById('stand-button');
-    const betButton = document.getElementById('bet-button');
-
-    if (dealButton) {
-      dealButton.addEventListener('click', () => {
-        this.startNewRound();
-        this.enableHitAndStandButtons();
-      });
-    }
-    if (hitButton) {
-      hitButton.addEventListener('click', () => this.hitPlayer());
-    }
-    if (standButton) {
-      standButton.addEventListener('click', () => this.standPlayer());
-    }
-    if (betButton) {
-      betButton.addEventListener('click', () => this.placeBet());
-    }
+    this.hitButton && this.hitButton.addEventListener('click', () => this.hitPlayer());
+    this.standButton && this.standButton.addEventListener('click', () => this.standPlayer());
+    this.dealButton && this.dealButton.addEventListener('click', () => {
+      this.startNewRound();
+      this.enableHitAndStandButtons();
+    });
     this.addResizeListener();
   }
 
@@ -239,63 +292,29 @@ export class Game {
       this.level++;
       this.levelUp(`Level Up! Level: ${this.level}`);
     }
-
     for (let i = 0; i < 2; i++) {
       this.player.dealCard(this.deck.dealCard()!);
       this.dealer.dealCard(this.deck.dealCard()!);
     }
-
     this.renderCards();
-
     if (this.player.getHand().getHandValue() === 21) {
       this.endRound();
     }
-    this.enableButtons();
-    this.enableStandButton(); // Enable the "Stand" button at the start of a new round
   }
 
-  private enableStandButton(): void {
-    const standButton = document.getElementById('stand-button') as HTMLButtonElement;
-    if (standButton) {
-      standButton.disabled = false;
-    }
-  }
-
-  private enableButtons(): void {
-    const betButton = document.getElementById('bet-button') as HTMLButtonElement;
-    const hitButton = document.getElementById('hit-button') as HTMLButtonElement;
-
-    if (betButton) {
-      betButton.disabled = false;
-    }
-
-    if (hitButton) {
-      hitButton.disabled = false;
-    }
-
-    // Enable the "Stand" button only if the player's hand value is less than 21
-    const standButton = document.getElementById('stand-button') as HTMLButtonElement;
-    if (standButton) {
-      standButton.disabled = this.player.getHand().getHandValue() >= 21;
-    }
-  }
 
   private addResizeListener() {
     window.addEventListener('resize', this.handleResize.bind(this));
   }
 
   private renderCards() {
+    this.scoreCardContainer.visible = true;
     this.gameContainer.removeChildren();
     const playerCards = this.player.getHand().getCards();
     const dealerCards = this.dealer.getHand().getCards();
-    // Distance between cards
     const cardSpacing = 0;
-    // Angle of rotation for the cards
     let rotationAngle = -20; // in degrees
     const centerX = window.innerWidth * 0.5;
-    // Render player cards
-    // let playerCardX = 100;
-    // const playerCardY = 500;
     this.backCard.getSprite().alpha = 1;
     this.backCard.getSprite().scale.set(0.65);
     this.backCard.getSprite().skew.set(0, 0);
@@ -322,7 +341,6 @@ export class Game {
       playerCardX += cardSpacing;
     }
 
-    // Render dealer cards
     rotationAngle = -15;
     let dealerCardX = (centerX - (dealerCards.length - 1) * cardSpacing * 0.5);
     this.backCard.show();
@@ -346,7 +364,6 @@ export class Game {
       this.backCard.getSprite().anchor.set(0, 1);
       this.backCard.getSprite().rotation = cardSprite.rotation;
 
-      //score card text n
       this.dealerScoreCardUI.setTransform(cardSprite.x, cardSprite.y - 60);
       this.dealerScoreText.text = `${this.dealer.getHand().getHandValue()}`;
       this.dealerScoreText.y = this.dealerScoreCardUI.y + (this.dealerScoreCardUI.height) / 4 + 5;
@@ -368,113 +385,61 @@ export class Game {
         this.levelUp(`Level Up! Level: ${this.level}`);
       }
       this.renderCards();
-
-      if (this.player.getHand().getHandValue() >= 21) {
+      if (this.player.getHand().getHandValue() >= 17) {
         this.endRound();
       }
     }
   }
 
   private levelUp(text: string): void {
-    // Reset the player's chips and level up
     this.player = new Player(1000);
     this.resultDisplay.setText(text);
+  }
 
-    // Enable the bet button to start a new round
-    this.enableBetButton();
-  }
-  private enableBetButton(): void {
-    const betButton = document.getElementById('bet-button') as HTMLButtonElement;
-    if (betButton) {
-      betButton.disabled = false;
-    }
-  }
 
   private standPlayer() {
     this.endRound();
   }
 
   private endRound() {
-    this.disableButtons();
     this.dealerTurn();
   }
 
-  // Handler function for window resize events
   private handleResize(): void {
     this.app.renderer.resize(window.innerWidth, window.innerHeight);
-    // Update your game layout and positions here
-    // const screenWidth = window.innerWidth;
-    // const screenHeight = window.innerHeight;
-
-    // // Adjust app size
-    // this.app.renderer.resize(screenWidth, screenHeight);
-    // if (window.innerWidth / window.innerHeight >= this.ratio) {
-    //   var w = window.innerHeight * this.ratio;
-    //   var h = window.innerHeight;
-    // } else {
-    //   var w = window.innerWidth;
-    //   var h = window.innerWidth / this.ratio;
-    // }
-    // this.renderer.view.style.width = w + 'px';
-    // this.renderer.view.style.height = h + 'px';
-    // const parent = this.app.view.parentNode;
-
-    // // Resize the renderer
-    // if (parent !== null) {
-    //   // @ts-ignore
-    //   this.app.renderer.resize(parent.clientWidth, parent.clientHeight);
-    // }
   }
 
   private dealerTurn(): void {
+    this.disableButtons();
     const dealerHand = this.dealer.getHand();
     const cards = dealerHand.getCards();
     const lastCard = cards[cards.length - 1];
 
     if (!lastCard.getActive()) {
       lastCard.show();
-      // Flip back card by animating its alpha from 1 to 0
-      // Flip the hidden card by rotating it from 0 to 180 degrees
       gsap.to(this.backCard.getSprite().skew, {
         y: -3.6, duration: 0.5, onStart: () => {
           gsap.to(this.backCard.getSprite(), {
             alpha: 0, duration: 0.5
           })
-          // After the first rotation, change the texture to the front face
           const card: Sprite = lastCard.getSprite()
-
-          // Flip the card back to its original position by rotating it from 180 to 360 degrees
           gsap.to(card, {
             alpha: 1, duration: 0.5, onComplete: () => {
-              // Continue with the evaluation after a delay (1500ms)
-
               this.evaluateResult();
             }
           });
         }
       });
     } else {
-      // If the last card is not hidden, evaluate the result
       this.evaluateResult();
     }
   }
 
   private disableButtons(): void {
-    const betButton = document.getElementById('bet-button') as HTMLButtonElement;
-    const hitButton = document.getElementById('hit-button') as HTMLButtonElement;
-    const standButton = document.getElementById('stand-button') as HTMLButtonElement;
-
-    if (betButton) {
-      betButton.disabled = true;
-    }
-
-    if (hitButton) {
-      hitButton.disabled = true;
-    }
-
-    if (standButton) {
-      standButton.disabled = true;
-    }
+    console.log("Disabled buttons");
+    this.dealButton && (this.dealButton.disabled = true);
+    this.hitButton && (this.hitButton.disabled = true);
+    this.standButton && (this.standButton.disabled = true);
   }
 
   private evaluateResult() {
@@ -504,67 +469,62 @@ export class Game {
       this.player.loseBet();
     }
     this.updateBalance(this.balanceDisplay.getBalance() + winAmount);
-
+    this.resultDisplay.show();
     this.resultDisplay.setText(resultMessage);
     this.resultDisplay.getDisplayObject().alpha = 0;
     this.resultDisplay.getDisplayObject().scale.set(0);
 
     gsap.timeline()
-    .to(this.resultDisplay.getDisplayObject(), { alpha: 1, duration: 0.5,  onStart: () => {
-      gsap.to(this.resultDisplay.getDisplayObject().scale, { x : 1, y:1, duration: 0.5, ease: 'power2.out' })
-    }, ease: 'power2.out' })
-    .to({}, { duration: 0.5, delay: 0.5 }) // Wait for 500ms
-    .to(this.resultDisplay.getDisplayObject(), { alpha: 0, duration: 0.5,  onStart: () => {
-      gsap.to(this.resultDisplay.getDisplayObject().scale, { x : 0, y:0, duration: 0.5, ease: 'power2.in' })
-    }, ease: 'power2.in' });
+      .to(this.resultDisplay.getDisplayObject(), {
+        alpha: 1, duration: 0.5, onStart: () => {
+          gsap.to(this.resultDisplay.getDisplayObject().scale, { x: 1, y: 1, duration: 0.5, ease: 'power2.out' })
+        }, ease: 'power2.out'
+      })
+      .to({}, { duration: 0.5, delay: 1 }) // Wait for 500ms
+      .to(this.resultDisplay.getDisplayObject(), {
+        alpha: 0, duration: 0.5, onStart: () => {
+          gsap.to(this.resultDisplay.getDisplayObject().scale, { x: 0, y: 0, duration: 0.5, ease: 'power2.in' })
+        }, onComplete: () => {
+          this.resultDisplay.hide();
+          this.hideAndResetCard();
+        }, ease: 'power2.in'
+      });
 
-    // setTimeout(() => {
-    //   // this.resultDisplay.getDisplayObject().visible = false;
-    // }, 1500);
-  
     if (this.player.getChips() <= 0) {
       this.levelUp('Fill the pump by add new bet by place bet button');
     } else {
-      this.enableDealButton();
     }
-    this.betAmount= 0;
+    this.betAmount = 0;
+  }
+
+  private hideAndResetCard(): void {
+    this.playerCardMap.clear();
+    this.dealerCardMap.clear();
+
+    // Reset the back card visibility and position
+    this.backCard.hide();
+    this.backCard.getSprite().alpha = 1;
+    this.backCard.getSprite().rotation = 0;
+
+    // Remove all cards from the game container
+    this.gameContainer.removeChildren();
+
+    // Reset player's and dealer's hands
+    this.player.clearHand();
+    this.dealer.clearHand();
+
+
+    // Update score card texts to display 0
+    this.playerText.text = '0';
+    this.dealerScoreText.text = '0';
+    this.scoreCardContainer.visible = false;
+    this.clonedChipsContainer.visible = false;
+    this.playArrowAnimation();
   }
 
 
   private enableHitAndStandButtons(): void {
-    const hitButton = document.getElementById('hit-button') as HTMLButtonElement;
-    const standButton = document.getElementById('stand-button') as HTMLButtonElement;
-
-    if (hitButton) {
-      hitButton.disabled = false;
-    }
-    if (standButton) {
-      standButton.disabled = false;
-    }
-  }
-
-  private placeBet(): void {
-    console.log("Plave bet called");
-    const betInput = document.getElementById('bet-amount') as HTMLInputElement;
-    const betAmount = parseInt(betInput.value);
-
-    if (betAmount >= 100 && betAmount <= 1000) {
-      // Set the bet amount for the player
-      this.betAmount = betAmount;
-
-      // Disable the bet button to prevent multiple bets in one round
-      const betButton = document.getElementById('bet-button') as HTMLButtonElement;
-      betButton.disabled = true;
-
-      // Enable the "Stand" button
-      this.enableStandButton();
-
-      // Start a new round
-      this.startNewRound();
-    } else {
-      alert('Please enter a valid bet amount between 100 and 1000.');
-    }
+    this.hitButton && (this.hitButton.disabled = false);
+    this.standButton && (this.standButton.disabled = false);
   }
 }
-
-// Card, Dealer, Deck, Hand, Player classes remain the same

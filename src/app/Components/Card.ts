@@ -46,9 +46,6 @@ export class Card {
   }
 
   getValue(): number {
-    // For simplicity, assume that the value of cards is equal to their rank
-    // For face cards (11, 12, 13), value will be 10
-    // For Ace (01), value can be either 1 or 11 (handled in Hand class)
     const numericValue = parseInt(this.rank);
     return isNaN(numericValue) ? 10 : numericValue;
   }
@@ -62,24 +59,20 @@ export class Card {
     return this.sprite.visible;
   }
 
-  // Show the front face of the card
   show(): void {
     this.sprite.visible = true;
     this.isHidden = false;
   }
 
-  // Hide the card
   hide(): void {
     this.sprite.visible = false;
     this.isHidden = true;
   }
 
-  // Check if the card is currently hidden
   isCardHidden(): boolean {
     return this.isHidden;
   }
 
-  // Get the PIXI.Sprite for the card's image
   getCardSprite(): Sprite {
     return this.sprite;
   }
