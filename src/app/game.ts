@@ -90,7 +90,7 @@ export class Game {
     this.gameContainer = new Container();
     this.app.stage.addChild(this.gameContainer);
     this.loader = new Loader();
-    this.loadImages();
+    this.loadAssetsAndInitialize();
   }
 
   private loadImages() {
@@ -151,6 +151,39 @@ export class Game {
         this.playArrowAnimation();
       }
     });
+  }
+
+  private loadAssetsAndInitialize() {
+    const loaderContainer = document.createElement('div');
+    loaderContainer.id = 'loader-container';
+    loaderContainer.style.width = '100%';
+    loaderContainer.style.height = '100%';
+    loaderContainer.style.position = 'fixed';
+    loaderContainer.style.top = '0';
+    loaderContainer.style.left = '0';
+    loaderContainer.style.display = 'flex';
+    loaderContainer.style.justifyContent = 'center';
+    loaderContainer.style.alignItems = 'center';
+    loaderContainer.style.background = 'rgba(0, 0, 0, 0.8)';
+    loaderContainer.style.zIndex = '9999';
+
+    const loaderText = document.createElement('div');
+    loaderText.style.color = '#fff';
+    loaderText.style.fontSize = '24px';
+    loaderContainer.appendChild(loaderText);
+
+    document.body.appendChild(loaderContainer);
+ // @ts-ignore
+    this.loader.onProgress.add((loader: { progress: number; }) => {
+      const progress = Math.round(loader.progress);
+      loaderText.textContent = `Loading... ${progress}%`;
+
+      if (progress === 100) {
+        loaderContainer.remove();
+      }
+    });
+
+    this.loadImages();
   }
 
 
