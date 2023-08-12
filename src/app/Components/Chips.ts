@@ -37,7 +37,7 @@ export class Chips {
 
         const totalChipsWidth = this.chips.reduce((totalWidth, chip) => totalWidth + chip.width, 0) + (this.chips.length - 1) * chipSpacing;
 
-        const startX = (window.innerWidth - totalChipsWidth) / 2;
+        const startX = (window.innerWidth - totalChipsWidth) / 2 + 50;
 
         let x = startX;
 
