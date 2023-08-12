@@ -9,6 +9,7 @@ import { ResultDisplay } from './Result/ResultDisplay';
 import gsap from 'gsap';
 import { BackCard } from './Components/BackCard';
 import { Chips } from './Components/Chips';
+import { Balance } from './UI/Balance';
 
 
 export class Game {
@@ -26,11 +27,12 @@ export class Game {
   private ranks = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13'];
   private suits = [1000, 2000, 3000, 4000];
   private cardIds: string[] = [];
+  private balanceDisplay!: Balance;
 
 
 
 
-  private betAmount = 100;
+  private betAmount = 0;
   private backCard!: BackCard;
   private playerCardMap: Map<string, Card> = new Map();
   private dealerCardMap: Map<string, Card> = new Map();
@@ -78,6 +80,8 @@ export class Game {
     this.loader.add('Chip10', './assets/Chips/Chips10.png');
     this.loader.add('Chip20', './assets/Chips/Chips20.png');
     this.loader.add('Chips_Back', './assets/Chips/chips_Back.png');
+    this.loader.add('Add_button', './assets/UI_ICON/add_button.png');
+
 
     for (let i: number = 0; i < this.suits.length; i++) {
       for (let j: number = 0; j < this.ranks.length; j++) {
@@ -118,10 +122,12 @@ export class Game {
     this.deck = new Deck();
     this.player = new Player(1000);
     this.dealer = new Dealer();
-    this.resultDisplay = new ResultDisplay(); // No constructor argument needed
+    this.resultDisplay = new ResultDisplay(); 
+    this.balanceDisplay = new Balance(Texture.from('Add_button')); // You can set the initial balance here
+    this.app.stage.addChild(this.balanceDisplay.getContainer());// No constructor argument needed
     this.app.stage.addChild(this.resultDisplay.getDisplayObject());
-    this.resultDisplay.getDisplayObject().x = window.screen.width / 4;
-    this.resultDisplay.getDisplayObject().y = 400;
+    this.resultDisplay.getDisplayObject().x =(window.innerWidth) * 0.5;
+    this.resultDisplay.getDisplayObject().y = (window.innerHeight - 50) * 0.5;
     this.scoreCardContainer = new Container();
     this.backCard = new BackCard(Texture.from('BackCard'));
     this.app.stage.addChild(this.backCard.getSprite());
@@ -130,6 +136,7 @@ export class Game {
     this.enableDealButton();
     this.initializeChips();
     this.startNewRound();
+    this.updateBalance(this.player.getChips());
   }
 
   private initializeChips(): void {
@@ -140,12 +147,15 @@ export class Game {
       Texture.from('Chip10'),
       Texture.from('Chip20'),
     ];
-    this.chips = new Chips([1, 2, 5, 10, 20], this.onChipClick, chipTextures);
+    this.chips = new Chips([1, 2, 5, 10, 20], this.onChipClick.bind(this), chipTextures);
     this.app.stage.addChild(this.chips.getContainer());
   }
 
   private onChipClick(value: number): void {
     console.log("Chips click" + value);
+    this.betAmount += value;
+    let balance = this.balanceDisplay.getBalance() - value;
+    this.updateBalance(balance);
   }
 
   private initializeUIcon(): void {
@@ -167,6 +177,8 @@ export class Game {
     this.dealerScoreCardUI.setTransform(300, 400);
     this.dealerScoreText = new Text('0', this.textStyle);
     this.scoreCardContainer.addChild(this.dealerScoreText);
+
+
   }
 
   private enableDealButton() {
@@ -187,6 +199,10 @@ export class Game {
     if (betButton) {
       betButton.disabled = false;
     }
+  }
+
+  updateBalance(amount: number) {
+    this.balanceDisplay.updateBalance(amount);
   }
 
   private subscribeEvents() {
@@ -464,32 +480,54 @@ export class Game {
   private evaluateResult() {
     const playerHandValue = this.player.getHand().getHandValue();
     const dealerHandValue = this.dealer.getHand().getHandValue();
+    let winAmount = 0;
 
     let resultMessage = '';
     if (playerHandValue > 21) {
       resultMessage = 'Player Busts! Dealer Wins!';
       this.player.loseBet();
+      winAmount = -this.betAmount;
     } else if (dealerHandValue > 21) {
-      resultMessage = 'Dealer Busts! Player Wins!';
+      resultMessage = `Dealer Busts! Player Wins!\n Win Amount is ${this.betAmount}`;
       this.player.addWinnings(this.betAmount);
+      winAmount = this.betAmount;
     } else if (playerHandValue === dealerHandValue) {
       resultMessage = "It's a Tie!";
       this.player.addWinnings(this.betAmount / 2);
+      winAmount = this.betAmount / 2;
     } else if (playerHandValue > dealerHandValue) {
-      resultMessage = 'Player Wins!';
+      resultMessage = `Player Wins! \n Win Amount is ${this.betAmount}`;
       this.player.addWinnings(this.betAmount);
+      winAmount = - this.betAmount;
     } else {
       resultMessage = 'Dealer Wins!';
       this.player.loseBet();
     }
+    this.updateBalance(this.balanceDisplay.getBalance() + winAmount);
 
     this.resultDisplay.setText(resultMessage);
+    this.resultDisplay.getDisplayObject().alpha = 0;
+    this.resultDisplay.getDisplayObject().scale.set(0);
 
+    gsap.timeline()
+    .to(this.resultDisplay.getDisplayObject(), { alpha: 1, duration: 0.5,  onStart: () => {
+      gsap.to(this.resultDisplay.getDisplayObject().scale, { x : 1, y:1, duration: 0.5, ease: 'power2.out' })
+    }, ease: 'power2.out' })
+    .to({}, { duration: 0.5, delay: 0.5 }) // Wait for 500ms
+    .to(this.resultDisplay.getDisplayObject(), { alpha: 0, duration: 0.5,  onStart: () => {
+      gsap.to(this.resultDisplay.getDisplayObject().scale, { x : 0, y:0, duration: 0.5, ease: 'power2.in' })
+    }, ease: 'power2.in' });
+
+    // setTimeout(() => {
+    //   // this.resultDisplay.getDisplayObject().visible = false;
+    // }, 1500);
+  
     if (this.player.getChips() <= 0) {
       this.levelUp('Fill the pump by add new bet by place bet button');
     } else {
       this.enableDealButton();
     }
+    this.betAmount= 0;
   }
 
 

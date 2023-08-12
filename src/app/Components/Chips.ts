@@ -33,12 +33,15 @@ export class Chips {
 
     positionChips() {
         const chipSpacing = 10;
-        let x = chipSpacing;
+        let x = 30;
 
-        this.chips.forEach(chip => {
+        this.chips.forEach((chip,index) => {
             chip.x = x;
             chip.y = window.innerHeight - chip.height / 2 - 10; // Adjust the position as needed
             x += chip.width + chipSpacing;
+            if(index === this.chips.length - 1){
+                chip.y += 10;
+            }
         });
     }
 
