@@ -1,10 +1,11 @@
 const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin'); // Import HtmlWebpackPlugin
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
   return {
-    entry: './src/index.ts', // Entry point for your application
+    entry: './src/index.ts',
     mode: 'development',
     module: {
       rules: [
@@ -21,21 +22,23 @@ module.exports = (env, argv) => {
     devServer: {
       open: true,
       static: {
-        directory: path.join(__dirname), // Serve files from the project root
+        directory: path.join(__dirname),
       },
       compress: false,
       port: 9000,
-      hot: true, // Enable hot module replacement (HMR)
+      hot: true,
     },
     output: {
-      path: path.resolve(__dirname, 'dist'), // Output path (you can change 'dist' to any folder you prefer)
-      filename: 'bundle.js', // Output file name
+      path: path.resolve(__dirname, 'dist'),
+      filename: 'bundle.js',
     },
     plugins: [
       new CopyWebpackPlugin({
         patterns: [{ from: 'src/assets', to: 'assets' }],
       }),
+      new HtmlWebpackPlugin({ // Add HtmlWebpackPlugin
+        template: 'index.html', // Path to your HTML template
+      }),
     ],
   };
-}
-
+};
