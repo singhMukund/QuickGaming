@@ -1,5 +1,5 @@
 // Game.ts
-import { Application, Container, Graphics, Loader, Sprite, Text, TextStyle, Texture } from 'pixi.js';
+import { Application, Container, Graphics, Loader, Sprite, Text, TextStyle, Texture, autoDetectRenderer } from 'pixi.js';
 import { Background } from './Background/Background';
 import { Deck } from './Components/Deck';
 import { Player } from './Components/Player';
@@ -8,6 +8,7 @@ import { Card, Suit, Rank } from './Components/Card';
 import { ResultDisplay } from './Result/ResultDisplay';
 import gsap from 'gsap';
 import { BackCard } from './Components/BackCard';
+import { Chips } from './Components/Chips';
 
 
 export class Game {
@@ -20,10 +21,14 @@ export class Game {
   private player!: Player;
   private dealer!: Dealer;
   private resultDisplay!: ResultDisplay;
+  private chips!: Chips;
   private level = 1;
   private ranks = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13'];
   private suits = [1000, 2000, 3000, 4000];
   private cardIds: string[] = [];
+
+
+
 
   private betAmount = 100;
   private backCard!: BackCard;
@@ -32,22 +37,26 @@ export class Game {
   private scoreCardContainer!: Container;
   private scoreCardUI!: Sprite;
   private playerText !: Text;
+
+  private dealerScoreCardUI!: Sprite;
+  private dealerScoreText !: Text;
   textStyle = new TextStyle({
     fontFamily: 'Arial',
     fontSize: 24,
-    fill: '#ffffff', // White color
+    fill: '#ffffff',
+    align: 'center' // White color
   });
+  private renderer: any;
 
 
 
   constructor() {
     this.app = new Application({
       backgroundColor: 0x02a732,
-      width: this.appWidth,
-      height: this.appHeight,
-      resizeTo: window,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      // autoResize: true,
     });
-
     const pixiContainer = document.getElementById('pixi-container');
     if (pixiContainer) {
       pixiContainer.appendChild(this.app.view);
@@ -63,6 +72,13 @@ export class Game {
   private loadImages() {
     this.loader.add('scoreCardBG', './assets/UI_ICON/scoreCard.png');
     this.loader.add('BackCard', './assets/BackCard/BackCard.png');
+    this.loader.add('Chip1', './assets/Chips/Chips1.png');
+    this.loader.add('Chip2', './assets/Chips/Chips2.png');
+    this.loader.add('Chip5', './assets/Chips/Chips5.png');
+    this.loader.add('Chip10', './assets/Chips/Chips10.png');
+    this.loader.add('Chip20', './assets/Chips/Chips20.png');
+    this.loader.add('Chips_Back', './assets/Chips/chips_Back.png');
+
     for (let i: number = 0; i < this.suits.length; i++) {
       for (let j: number = 0; j < this.ranks.length; j++) {
         const fileName = `${this.suits[i] + parseInt(this.ranks[j])}`;
@@ -107,23 +123,50 @@ export class Game {
     this.resultDisplay.getDisplayObject().x = window.screen.width / 4;
     this.resultDisplay.getDisplayObject().y = 400;
     this.scoreCardContainer = new Container();
-    this.app.stage.addChild(this.scoreCardContainer);
     this.backCard = new BackCard(Texture.from('BackCard'));
     this.app.stage.addChild(this.backCard.getSprite());
     this.initializeUIcon();
     this.subscribeEvents();
     this.enableDealButton();
+    this.initializeChips();
     this.startNewRound();
   }
 
+  private initializeChips(): void {
+    const chipTextures = [
+      Texture.from('Chip1'),
+      Texture.from('Chip2'),
+      Texture.from('Chip5'),
+      Texture.from('Chip10'),
+      Texture.from('Chip20'),
+    ];
+    this.chips = new Chips([1, 2, 5, 10, 20], this.onChipClick, chipTextures);
+    this.app.stage.addChild(this.chips.getContainer());
+  }
+
+  private onChipClick(value: number): void {
+    console.log("Chips click" + value);
+  }
+
   private initializeUIcon(): void {
+    this.app.stage.addChild(this.scoreCardContainer);
     this.scoreCardContainer.name = 'scoreCardContainer';
     this.scoreCardUI = new Sprite(Texture.from('scoreCardBG'));
     this.scoreCardContainer.addChild(this.scoreCardUI);
     this.scoreCardUI.name = 'scoreCardUI';
-    this.scoreCardUI.setTransform(300, 400, 0.2, 0.2);
+    this.scoreCardUI.setTransform(300, 400);
     this.playerText = new Text('0', this.textStyle);
     this.scoreCardContainer.addChild(this.playerText);
+
+
+    //Dealer Score Card 
+
+    this.dealerScoreCardUI = new Sprite(Texture.from('scoreCardBG'));
+    this.scoreCardContainer.addChild(this.dealerScoreCardUI);
+    this.dealerScoreCardUI.name = 'dealerScoreCardUI';
+    this.dealerScoreCardUI.setTransform(300, 400);
+    this.dealerScoreText = new Text('0', this.textStyle);
+    this.scoreCardContainer.addChild(this.dealerScoreText);
   }
 
   private enableDealButton() {
@@ -167,6 +210,7 @@ export class Game {
     if (betButton) {
       betButton.addEventListener('click', () => this.placeBet());
     }
+    this.addResizeListener();
   }
 
   private startNewRound() {
@@ -220,47 +264,77 @@ export class Game {
     }
   }
 
+  private addResizeListener() {
+    window.addEventListener('resize', this.handleResize.bind(this));
+  }
+
   private renderCards() {
     this.gameContainer.removeChildren();
-
     const playerCards = this.player.getHand().getCards();
     const dealerCards = this.dealer.getHand().getCards();
+    // Distance between cards
+    const cardSpacing = 0;
+    // Angle of rotation for the cards
+    let rotationAngle = -20; // in degrees
+    const centerX = window.innerWidth * 0.5;
     // Render player cards
-    let playerCardX = 100;
-    const playerCardY = 500;
+    // let playerCardX = 100;
+    // const playerCardY = 500;
     this.backCard.getSprite().alpha = 1;
-    this.backCard.getSprite().scale.set(0.92);
-    this.backCard.getSprite().angle = 0;
+    this.backCard.getSprite().scale.set(0.65);
+    this.backCard.getSprite().skew.set(0, 0);
 
+    let playerCardX = (centerX - (playerCards.length - 1) * cardSpacing * 0.5);
     for (let i = 0; i < playerCards.length; i++) {
+      rotationAngle = rotationAngle + 5 * i;
+      if (i === dealerCards.length - 1) {
+        rotationAngle = 0;
+      }
       const card = playerCards[i];
       const cardSprite = card.getSprite();
       card.setId(`playerCard_${i}`);
+      cardSprite.anchor.set(0, 1);
       this.playerCardMap.set(`playerCard_${i}`, card);
-      cardSprite.position.set(playerCardX, playerCardY);
+      const playerCardY = window.innerHeight - cardSprite.height;
+      cardSprite.position.set(playerCardX - (cardSprite.width * 0.5), (playerCardY));
+      cardSprite.rotation = rotationAngle * (Math.PI / 180); // Convert degrees to radians
       this.gameContainer.addChild(cardSprite);
-      this.scoreCardUI.setTransform(cardSprite.x + (cardSprite.width) / 2 + 30, 400, 0.2, 0.2);
+      this.scoreCardUI.setTransform(cardSprite.x, cardSprite.y - 60);
       this.playerText.text = `${this.player.getHand().getHandValue()}`;
-      this.playerText.y = this.scoreCardUI.y + (this.scoreCardUI.height) / 4;
-      this.playerText.x = this.scoreCardUI.x + (this.scoreCardUI.width) / 2.5 + 10;
-
-      playerCardX += 100;
+      this.playerText.y = this.scoreCardUI.y + (this.scoreCardUI.height) / 4 + 5;
+      this.playerText.x = this.scoreCardUI.x + (this.scoreCardUI.width) / 4 + 5;
+      playerCardX += cardSpacing;
     }
 
     // Render dealer cards
-    let dealerCardX = 100;
-    const dealerCardY = 100;
+    rotationAngle = -15;
+    let dealerCardX = (centerX - (dealerCards.length - 1) * cardSpacing * 0.5);
     this.backCard.show();
     for (let i = 0; i < dealerCards.length; i++) {
+      rotationAngle = rotationAngle + 5 * i;
+      if (i === dealerCards.length - 1) {
+        rotationAngle = 0;
+      }
       const card = dealerCards[i];
       const cardSprite = card.getSprite();
       card.setId(`dealerCard_${i}`);
+      cardSprite.anchor.set(0, 1);
       this.dealerCardMap.set(`dealerCard_${i}`, card);
-      cardSprite.position.set(dealerCardX, dealerCardY);
+      const dealerCardY = window.innerHeight - cardSprite.height;
+      cardSprite.position.set(dealerCardX - (cardSprite.width * 0.5), (dealerCardY * 0.5));
+      cardSprite.rotation = rotationAngle * (Math.PI / 180); // Convert degrees to radians
       this.gameContainer.addChild(cardSprite);
-      dealerCardX += 100;
+      dealerCardX += cardSpacing;
       this.backCard.getSprite().x = cardSprite.x;
       this.backCard.getSprite().y = cardSprite.y;
+      this.backCard.getSprite().anchor.set(0, 1);
+      this.backCard.getSprite().rotation = cardSprite.rotation;
+
+      //score card text n
+      this.dealerScoreCardUI.setTransform(cardSprite.x, cardSprite.y - 60);
+      this.dealerScoreText.text = `${this.dealer.getHand().getHandValue()}`;
+      this.dealerScoreText.y = this.dealerScoreCardUI.y + (this.dealerScoreCardUI.height) / 4 + 5;
+      this.dealerScoreText.x = this.dealerScoreCardUI.x + (this.dealerScoreCardUI.width) / 4 + 5;
       if (i === 1) {
         card.hide();
         cardSprite.alpha = 0;
@@ -272,6 +346,11 @@ export class Game {
   private hitPlayer() {
     if (this.player.getHand().getHandValue() < 21) {
       this.player.dealCard(this.deck.dealCard()!);
+      if (this.deck.getDeckSize() <= 4) {
+        this.deck.resetDeck();
+        this.level++;
+        this.levelUp(`Level Up! Level: ${this.level}`);
+      }
       this.renderCards();
 
       if (this.player.getHand().getHandValue() >= 21) {
@@ -280,7 +359,7 @@ export class Game {
     }
   }
 
-  private levelUp(text : string): void {
+  private levelUp(text: string): void {
     // Reset the player's chips and level up
     this.player = new Player(1000);
     this.resultDisplay.setText(text);
@@ -304,6 +383,33 @@ export class Game {
     this.dealerTurn();
   }
 
+  // Handler function for window resize events
+  private handleResize(): void {
+    this.app.renderer.resize(window.innerWidth, window.innerHeight);
+    // Update your game layout and positions here
+    // const screenWidth = window.innerWidth;
+    // const screenHeight = window.innerHeight;
+
+    // // Adjust app size
+    // this.app.renderer.resize(screenWidth, screenHeight);
+    // if (window.innerWidth / window.innerHeight >= this.ratio) {
+    //   var w = window.innerHeight * this.ratio;
+    //   var h = window.innerHeight;
+    // } else {
+    //   var w = window.innerWidth;
+    //   var h = window.innerWidth / this.ratio;
+    // }
+    // this.renderer.view.style.width = w + 'px';
+    // this.renderer.view.style.height = h + 'px';
+    // const parent = this.app.view.parentNode;
+
+    // // Resize the renderer
+    // if (parent !== null) {
+    //   // @ts-ignore
+    //   this.app.renderer.resize(parent.clientWidth, parent.clientHeight);
+    // }
+  }
+
   private dealerTurn(): void {
     const dealerHand = this.dealer.getHand();
     const cards = dealerHand.getCards();
@@ -313,14 +419,17 @@ export class Game {
       lastCard.show();
       // Flip back card by animating its alpha from 1 to 0
       // Flip the hidden card by rotating it from 0 to 180 degrees
-      gsap.to(this.backCard.getSprite(), {
-        alpha: 0, duration: 0.5, onStart: () => {
+      gsap.to(this.backCard.getSprite().skew, {
+        y: -3.6, duration: 0.5, onStart: () => {
+          gsap.to(this.backCard.getSprite(), {
+            alpha: 0, duration: 0.5
+          })
           // After the first rotation, change the texture to the front face
           const card: Sprite = lastCard.getSprite()
 
           // Flip the card back to its original position by rotating it from 180 to 360 degrees
           gsap.to(card, {
-            alpha: 1,duration: 0.5, onComplete: () => {
+            alpha: 1, duration: 0.5, onComplete: () => {
               // Continue with the evaluation after a delay (1500ms)
 
               this.evaluateResult();

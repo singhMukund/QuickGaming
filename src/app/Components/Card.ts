@@ -20,6 +20,7 @@ export class Card {
     this.isHidden = true;
     this.frontTexture = texture;
     this.sprite = new Sprite(this.frontTexture);
+    this.sprite.scale.set(0.7);
   }
 
   getId() :string{
